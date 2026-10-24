@@ -36,5 +36,5 @@ re-running the workflow. `workflow_dispatch` with `dry_run` builds everything wi
 ## Notes
 
 - Versions already published cannot be overwritten; to fix a bad release, bump the version.
-- `speed` tests are informational in CI (timing on shared runners is noisy) and excluded from
-  the required python job.
+- `speed` tests are not run in CI (timing on shared runners is noisy). Run them locally with
+  `uv run pytest -m speed` before releasing.

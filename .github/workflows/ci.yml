@@ -54,22 +54,11 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - name: sync (builds the extension)
         run: uv sync --python ${{ matrix.python }}
-      # Timing tests compare against the numpy reference and are too noisy for shared runners;
-      # they run in the separate `speed` job.
+      # Speed tests (marker `speed`) compare timings against the numpy reference; they are too noisy
+      # for shared runners, so they run locally only (`uv run pytest -m speed`).
       - name: pytest
         run: uv run pytest -q -m "not speed"
 
-  speed:
-    name: speed (informational)
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - uses: astral-sh/setup-uv@v5
-      - run: uv sync
-      - run: uv run pytest -q -m speed
 
   package:
     name: package checks
