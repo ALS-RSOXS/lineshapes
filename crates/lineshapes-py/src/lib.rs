@@ -1,12 +1,10 @@
 //! Python bindings: `Model` (chainable builder, callable) and `Evaluator` (model bound to a grid).
 
 use numpy::{IntoPyArray, PyArray1, PyArrayMethods, PyReadonlyArray1, PyReadwriteArray1};
-use num_complex::Complex64;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-use crate::bound::Evaluator;
-use crate::model::{Component, Model};
+use lineshapes::{Complex64, Component, Evaluator, Model};
 
 fn err(e: String) -> PyErr {
     PyValueError::new_err(e)
@@ -38,7 +36,7 @@ fn with_slice<R>(a: &PyReadonlyArray1<'_, f64>, f: impl FnOnce(&[f64]) -> R) -> 
 ///     n = m(energy, params=theta)    # evaluate at theta (model unchanged)
 ///     ev = m.bind(energy)            # fixed grid + per-component cache
 ///     n = ev(theta)                  # recomputes only components whose params changed
-#[pyclass(name = "Model", module = "lineshapes_rs._core", skip_from_py_object)]
+#[pyclass(name = "Model", module = "lineshapes._core", skip_from_py_object)]
 #[derive(Clone)]
 pub struct PyModel {
     inner: Model,
@@ -55,33 +53,79 @@ impl PyModel {
 impl PyModel {
     #[new]
     fn new() -> Self {
-        Self { inner: Model::new() }
+        Self {
+            inner: Model::new(),
+        }
     }
 
     /// Gaussian peak; ``width`` is the 1/e half-width (sigma = width / sqrt(2)).
-    fn gaussian(slf: PyRefMut<'_, Self>, e0: f64, width: f64, amp: f64) -> PyResult<PyRefMut<'_, Self>> {
+    fn gaussian(
+        slf: PyRefMut<'_, Self>,
+        e0: f64,
+        width: f64,
+        amp: f64,
+    ) -> PyResult<PyRefMut<'_, Self>> {
         Self::add(slf, Component::Gaussian { e0, width, amp })
     }
 
     /// Lorentzian peak; ``gamma`` is the half width at half maximum.
-    fn lorentzian(slf: PyRefMut<'_, Self>, e0: f64, gamma: f64, amp: f64) -> PyResult<PyRefMut<'_, Self>> {
+    fn lorentzian(
+        slf: PyRefMut<'_, Self>,
+        e0: f64,
+        gamma: f64,
+        amp: f64,
+    ) -> PyResult<PyRefMut<'_, Self>> {
         Self::add(slf, Component::Lorentzian { e0, gamma, amp })
     }
 
     /// Exact Voigt; ``sigma`` Gaussian std, ``gamma`` Lorentzian HWHM.
-    fn voigt(slf: PyRefMut<'_, Self>, e0: f64, sigma: f64, gamma: f64, amp: f64) -> PyResult<PyRefMut<'_, Self>> {
-        Self::add(slf, Component::Voigt { e0, sigma, gamma, amp })
+    fn voigt(
+        slf: PyRefMut<'_, Self>,
+        e0: f64,
+        sigma: f64,
+        gamma: f64,
+        amp: f64,
+    ) -> PyResult<PyRefMut<'_, Self>> {
+        Self::add(
+            slf,
+            Component::Voigt {
+                e0,
+                sigma,
+                gamma,
+                amp,
+            },
+        )
     }
 
     /// Pseudo-Voigt ``eta*L + (1-eta)*G`` with shared ``fwhm``.
-    fn pseudo_voigt(slf: PyRefMut<'_, Self>, e0: f64, fwhm: f64, eta: f64, amp: f64) -> PyResult<PyRefMut<'_, Self>> {
+    fn pseudo_voigt(
+        slf: PyRefMut<'_, Self>,
+        e0: f64,
+        fwhm: f64,
+        eta: f64,
+        amp: f64,
+    ) -> PyResult<PyRefMut<'_, Self>> {
         Self::add(slf, Component::PseudoVoigt { e0, fwhm, eta, amp })
     }
 
     /// Erf ionization step in beta, with optional linear post-edge ``decay``.
     #[pyo3(signature = (e0, width, height, decay=0.0))]
-    fn step(slf: PyRefMut<'_, Self>, e0: f64, width: f64, height: f64, decay: f64) -> PyResult<PyRefMut<'_, Self>> {
-        Self::add(slf, Component::Step { e0, width, height, decay })
+    fn step(
+        slf: PyRefMut<'_, Self>,
+        e0: f64,
+        width: f64,
+        height: f64,
+        decay: f64,
+    ) -> PyResult<PyRefMut<'_, Self>> {
+        Self::add(
+            slf,
+            Component::Step {
+                e0,
+                width,
+                height,
+                decay,
+            },
+        )
     }
 
     /// Linear continuum in beta: ``bkg + slope*E``.
@@ -100,10 +144,14 @@ impl PyModel {
         let e = with_slice(&energy, <[f64]>::to_vec);
         let d = with_slice(&delta, <[f64]>::to_vec);
         if e.len() != d.len() || e.is_empty() {
-            return Err(err("delta table energy/delta must be non-empty and equal length".into()));
+            return Err(err(
+                "delta table energy/delta must be non-empty and equal length".into(),
+            ));
         }
         if !e.windows(2).all(|w| w[0] < w[1]) {
-            return Err(err("delta table energies must be strictly increasing".into()));
+            return Err(err(
+                "delta table energies must be strictly increasing".into()
+            ));
         }
         slf.inner.set_delta_table(&e, &d);
         Ok(slf)
@@ -150,7 +198,10 @@ impl PyModel {
     }
 
     /// Set all parameters from a flat vector (validated; model unchanged on error).
-    fn set_params<'py>(mut slf: PyRefMut<'py, Self>, params: PyReadonlyArray1<'py, f64>) -> PyResult<PyRefMut<'py, Self>> {
+    fn set_params<'py>(
+        mut slf: PyRefMut<'py, Self>,
+        params: PyReadonlyArray1<'py, f64>,
+    ) -> PyResult<PyRefMut<'py, Self>> {
         with_slice(&params, |p| slf.inner.set_params(p)).map_err(err)?;
         Ok(slf)
     }
@@ -161,7 +212,9 @@ impl PyModel {
     #[pyo3(signature = (energy, cache=true))]
     fn bind(&self, energy: PyReadonlyArray1<'_, f64>, cache: bool) -> PyEvaluator {
         let e = with_slice(&energy, <[f64]>::to_vec);
-        PyEvaluator { inner: Evaluator::new(self.inner.clone(), &e, cache) }
+        PyEvaluator {
+            inner: Evaluator::new(self.inner.clone(), &e, cache),
+        }
     }
 
     /// Evaluate ``delta + 1j*beta`` on ``energy`` (1-D float64). GIL released.
@@ -199,7 +252,11 @@ impl PyModel {
     }
 
     fn __repr__(&self) -> String {
-        format!("Model(n_components={}, n_params={})", self.inner.n_components(), self.inner.n_params())
+        format!(
+            "Model(n_components={}, n_params={})",
+            self.inner.n_components(),
+            self.inner.n_params()
+        )
     }
 }
 
@@ -210,7 +267,7 @@ impl PyModel {
 ///     ev(theta, out=buf)       # write into a preallocated complex128 array (no allocation)
 ///
 /// ``scale``, ``continuum.*`` never trigger component work; changing ``shift`` recomputes all.
-#[pyclass(name = "Evaluator", module = "lineshapes_rs._core")]
+#[pyclass(name = "Evaluator", module = "lineshapes._core")]
 pub struct PyEvaluator {
     inner: Evaluator,
 }
@@ -240,7 +297,9 @@ impl PyEvaluator {
     /// Copy of the bound model at the current parameters.
     #[getter]
     fn model(&self) -> PyModel {
-        PyModel { inner: self.inner.model().clone() }
+        PyModel {
+            inner: self.inner.model().clone(),
+        }
     }
 
     fn set_params(&mut self, params: PyReadonlyArray1<'_, f64>) -> PyResult<()> {
@@ -265,8 +324,11 @@ impl PyEvaluator {
             None => unsafe { PyArray1::<Complex64>::new(py, n, false) },
         };
         {
-            let mut rw: PyReadwriteArray1<'_, Complex64> = arr.try_readwrite().map_err(|e| err(e.to_string()))?;
-            let buf = rw.as_slice_mut().map_err(|_| err("out must be a contiguous complex128 array".into()))?;
+            let mut rw: PyReadwriteArray1<'_, Complex64> =
+                arr.try_readwrite().map_err(|e| err(e.to_string()))?;
+            let buf = rw
+                .as_slice_mut()
+                .map_err(|_| err("out must be a contiguous complex128 array".into()))?;
             if buf.len() != n {
                 return Err(err(format!("out has length {}, expected {n}", buf.len())));
             }
@@ -277,7 +339,11 @@ impl PyEvaluator {
     }
 
     fn __repr__(&self) -> String {
-        format!("Evaluator(n_energy={}, n_params={})", self.inner.energy().len(), self.inner.n_params())
+        format!(
+            "Evaluator(n_energy={}, n_params={})",
+            self.inner.energy().len(),
+            self.inner.n_params()
+        )
     }
 }
 

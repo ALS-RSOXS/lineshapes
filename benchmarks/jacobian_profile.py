@@ -17,7 +17,7 @@ import time
 import numpy as np
 from scipy.special import dawsn
 
-from lineshapes_rs import Model
+from lineshapes import Model
 
 RNG = np.random.default_rng(1)
 STEPS = [(939.4, 6.1, 7.2e-5, 0.0), (960.7, 2.2, 5.1e-5, 0.0)]

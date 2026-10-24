@@ -14,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 
-from lineshapes_rs import Model
+from lineshapes import Model
 from tests.reference import lineshapes_ref as ref
 
 FIG = Path(__file__).parent / "figures"

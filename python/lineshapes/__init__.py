@@ -2,7 +2,7 @@
 
 Build a model by chaining, then call it for ``delta + 1j*beta``::
 
-    from lineshapes_rs import Model
+    from lineshapes import Model
     m = (Model()
          .gaussian(e0=933.8, width=0.49, amp=4.1e-5)
          .voigt(e0=935.7, sigma=0.8, gamma=0.3, amp=7.4e-5)
@@ -30,11 +30,17 @@ from __future__ import annotations
 
 import numpy as np
 
-from lineshapes_rs._core import Evaluator, Model
+from lineshapes import datasets, units
+from lineshapes._core import Evaluator, Model
+from lineshapes.units import beta_to_mu, mu_to_beta
 
 __all__ = [
     "Evaluator",
     "Model",
+    "beta_to_mu",
+    "datasets",
+    "mu_to_beta",
+    "units",
     "gaussian",
     "lorentzian",
     "voigt",

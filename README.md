@@ -1,4 +1,4 @@
-# lineshapes-rs
+# lineshapes
 
 Fast, composable optical-constant models for soft X-ray work. A model is a sum of
 **analytic Kramers-Kronig-paired peaks** (Gaussian, Lorentzian, Voigt, pseudo-Voigt) plus a
@@ -11,7 +11,7 @@ Evaluating a model returns `delta + 1j*beta` (n = 1 - delta + i beta) on an ener
 
 ```python
 import numpy as np
-from lineshapes_rs import Model
+from lineshapes import Model
 
 E = np.linspace(900, 1000, 4001)
 m = (Model()
@@ -35,29 +35,39 @@ Conventions:
 - `amp` is the height of beta at `e0` for every lineshape.
 - The pseudo-Voigt is stored as one Lorentzian plus one Gaussian, so its delta is exact.
 
-## Rust
+## Documentation
 
-```rust
-use _core::Model;
-let m = Model::new().gaussian(933.8, 0.49, 4.1e-5).step(939.4, 6.1, 7.2e-5, 0.0);
-let n = m.eval(&energies);          // Vec<Complex64>
-m.eval_into(&energies, &mut out);   // no allocation
-let n = m.eval_par(&energies);      // feature "parallel" (rayon)
+`make docs` builds the site (mkdocs with the `mkdocs_rsoxs` theme) into `site/`; `make docs-serve` previews it.
+The docs run the ZnPc and Alq3 examples (`examples/`, data shipped in `lineshapes.datasets`) to render their
+figures; `make docs-figures` regenerates them. The theme needs Python >= 3.13, so docs use their own
+environment (`.venv-docs`); the library itself supports Python >= 3.12.
+
+## Layout
+
 ```
+crates/lineshapes/      pure-Rust crate `lineshapes` (no Python/pyo3): Model, Evaluator, special functions
+crates/lineshapes-py/   thin PyO3 bindings crate -> lineshapes._core (not published to crates.io)
+python/lineshapes/        Python package (re-exports, function API, type stubs)
+docs/ examples/ tools/   mkdocs site, example scripts, data/docs generators
+tests/ benchmarks/ prototypes/   pytest suite vs numpy reference, timings, figures
+```
+
+Each half stands alone: `cargo add lineshapes` for Rust only (feature `parallel`, on by default,
+adds rayon), or `pip install lineshapes` for Python (bundles the compiled core). See
+`crates/lineshapes/README.md` for Rust usage.
 
 ## Development
 
 ```sh
+cargo test --workspace --release                          # Rust unit, integration and doc tests
 uv sync                                                   # builds the extension (release)
 uv run --with maturin maturin develop --release --uv      # rebuild after Rust changes
 uv run pytest                                             # precision + speed vs numpy reference
-cargo test --release --no-default-features --features parallel   # Rust unit tests
 uv run python -m benchmarks.bench                         # timings
 ```
 
-- Plain `cargo build` with the default `python` feature does not link on macOS; use maturin.
-- `[profile.release] strip = false` is required: stripping corrupts the extension on this
-  macOS toolchain ("mis-aligned LINKEDIT string pool").
+- `strip = false` (workspace `[profile.release]`) is required: stripping corrupts the extension
+  on this macOS toolchain ("mis-aligned LINKEDIT string pool").
 
 Validation (`tests/`) compares against a pure-numpy reference (`tests/reference/lineshapes_ref.py`),
 numerical Hilbert transforms, and kkcalc2 (pinned commit `e750040`) on a real Cu L-edge model.

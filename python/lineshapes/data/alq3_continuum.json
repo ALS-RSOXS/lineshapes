@@ -1,0 +1,28 @@
+{
+  "formula": "AlC27H18N3O3",
+  "density_g_cm3": 1.0,
+  "window_ev": [
+    249.9964237,
+    320.0057221
+  ],
+  "bkg": 0.0008269845052870262,
+  "slope": -2.4416954789305463e-06,
+  "step": {
+    "e0": 290.8117633333334,
+    "width": 1.5,
+    "height": 0.001108239012874411,
+    "decay": -7.916420099277344e-06
+  },
+  "fit_regions_ev": [
+    [
+      249.9964237,
+      280.0
+    ],
+    [
+      305.0,
+      320.0057221
+    ]
+  ],
+  "rms_rel_beta_error_in_fit_regions": 0.005256781279044453,
+  "note": "Continuum beta = bkg + slope*E + erf step at the ionization energy; delta table = kkcalc2 of this beta on the example window (density=1.0, per unit density). Fixed ahead of time; peaks are fit on top."
+}

@@ -13,7 +13,7 @@ import time
 
 import numpy as np
 
-from lineshapes_rs import Model
+from lineshapes import Model
 
 RNG = np.random.default_rng(2)
 

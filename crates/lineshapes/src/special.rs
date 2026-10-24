@@ -12,17 +12,29 @@ pub(crate) const ERF_SAT: f64 = 6.0;
 /// Asymptotic coefficients (2n-1)!!/2^n of Dawson's function:
 /// `D(x) = 1/(2x) * sum_n c_n / x^(2n)`; 13 terms give < 1e-16 relative error for |x| >= 10.
 const DAWSON_ASYMP: [f64; 13] = [
-    1.0, 0.5, 0.75, 1.875, 6.5625, 29.53125, 162.421875, 1055.7421875, 7918.06640625,
-    67303.564453125, 639383.8623046875, 6713530.554199219, 77205601.37329102,
+    1.0,
+    0.5,
+    0.75,
+    1.875,
+    6.5625,
+    29.53125,
+    162.421875,
+    1055.7421875,
+    7918.06640625,
+    67303.564453125,
+    639383.8623046875,
+    6713530.554199219,
+    77205601.37329102,
 ];
 
 /// `sum_{n=0}^{12} DAWSON_ASYMP[n] * u^n` by Estrin's scheme (shallow dependency tree
 /// instead of Horner's 12-deep chain; measured faster for complex `u`, slower for real). `lin(a, b, t) = a + b*t` with real coefficients.
 #[inline(always)]
-fn estrin12<T: Copy>(u: T, lin: impl Fn(f64, f64, T) -> T, mul: impl Fn(T, T) -> T) -> T
-where
-    T: std::ops::Add<Output = T>,
-{
+fn estrin12<T: Copy + std::ops::Add<Output = T>>(
+    u: T,
+    lin: impl Fn(f64, f64, T) -> T,
+    mul: impl Fn(T, T) -> T,
+) -> T {
     let c = &DAWSON_ASYMP;
     let u2 = mul(u, u);
     let u4 = mul(u2, u2);
@@ -45,7 +57,11 @@ where
 /// Dawson's function: asymptotic series for |x| >= 10, Faddeeva-package table otherwise.
 #[inline]
 pub fn fast_dawson(x: f64) -> f64 {
-    if x.abs() >= ASYMP_X { dawson_asymp(x) } else { x.dawson() }
+    if x.abs() >= ASYMP_X {
+        dawson_asymp(x)
+    } else {
+        x.dawson()
+    }
 }
 
 /// Asymptotic Dawson series; valid (< 1e-16 relative) for |x| >= 10.
@@ -67,7 +83,11 @@ pub(crate) fn dawson_asymp(x: f64) -> f64 {
 /// there), Faddeeva-package algorithm otherwise.
 #[inline]
 pub fn fast_w(z: Complex64) -> Complex64 {
-    if z.norm_sqr() >= ASYMP_X * ASYMP_X { w_asymp(z) } else { z.w() }
+    if z.norm_sqr() >= ASYMP_X * ASYMP_X {
+        w_asymp(z)
+    } else {
+        z.w()
+    }
 }
 
 /// Asymptotic Faddeeva series; valid for |z| >= 10, Im z >= 0.
@@ -127,4 +147,3 @@ pub(crate) fn interp(xs: &[f64], ys: &[f64], x: f64) -> f64 {
     let (x0, x1, y0, y1) = (xs[i - 1], xs[i], ys[i - 1], ys[i]);
     y0 + (y1 - y0) * (x - x0) / (x1 - x0)
 }
-

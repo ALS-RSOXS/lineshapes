@@ -1,22 +1,38 @@
 [project]
-name = "lineshapes-rs"
-version = "0.1.0"
-description = "Add your description here"
+name = "lineshapes"
+dynamic = ["version"]  # single source of truth: [workspace.package] version in Cargo.toml
+description = "Fast composable optical-constant models: analytic Kramers-Kronig-paired lineshape peaks plus a continuum."
 readme = "README.md"
+license = "BSD-3-Clause-LBNL"
+license-files = ["LICENSE", "COPYRIGHT"]
 authors = [
     { name = "Harlan D Heilman", email = "73567020+HarlanHeilman@users.noreply.github.com" }
 ]
 requires-python = ">=3.12"
-dependencies = [
-    "matplotlib>=3.11.2",
-    "numpy",
-    "scipy",
-]
+dependencies = ["numpy>=2.0"]
+
+[project.urls]
+Repository = "https://github.com/ALS-RSOXS/lineshapes"
+Documentation = "https://als-rsoxs.github.io/lineshapes"
+
+[project.optional-dependencies]
+# Needed only to run the example scripts (fitting + figures); the library itself needs just numpy.
+examples = ["scipy>=1.13", "matplotlib>=3.9"]
 
 [dependency-groups]
 dev = [
     "pytest>=8",
     "kkcalc2",
+    "scipy>=1.13",
+    "matplotlib>=3.9",
+]
+# Docs build on Python >= 3.13 (the mkdocs_rsoxs theme requires it): make docs uses its own env.
+docs = [
+    "mkdocs_rsoxs>=0.1.3; python_version >= '3.13'",
+    "mkdocstrings-python>=2.0.1",
+    "pymdown-extensions>=10",
+    "scipy>=1.13",
+    "matplotlib>=3.9",
 ]
 
 [tool.uv.sources]
@@ -32,13 +48,14 @@ markers = [
 filterwarnings = ["ignore::UserWarning:kkcalc2.*"]
 
 [tool.maturin]
-module-name = "lineshapes_rs._core"
-python-packages = ["lineshapes_rs"]
-python-source = "src"
+module-name = "lineshapes._core"
+python-packages = ["lineshapes"]
+python-source = "python"
+manifest-path = "crates/lineshapes-py/Cargo.toml"
 
 [tool.uv]
-cache-keys = [{ file = "pyproject.toml" }, { file = "src/**/*.rs" }, { file = "Cargo.toml" }, { file = "Cargo.lock" }]
+cache-keys = [{ file = "pyproject.toml" }, { file = "crates/**/*.rs" }, { file = "**/Cargo.toml" }, { file = "Cargo.lock" }]
 
 [build-system]
-requires = ["maturin>=1.0,<2.0"]
+requires = ["maturin>=1.9,<2.0"]
 build-backend = "maturin"

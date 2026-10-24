@@ -7,8 +7,8 @@ from pathlib import Path
 
 import numpy as np
 
-import lineshapes_rs as rs
-from lineshapes_rs import Model
+import lineshapes as rs
+from lineshapes import Model
 from tests.reference import lineshapes_ref as ref
 
 ROOT = Path(__file__).resolve().parents[1]

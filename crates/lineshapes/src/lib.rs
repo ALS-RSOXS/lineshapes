@@ -9,8 +9,5 @@ mod special;
 
 pub use bound::Evaluator;
 pub use model::{Component, Model};
-pub use special::{fast_dawson, fast_erf, fast_w};
 pub use num_complex::Complex64;
-
-#[cfg(feature = "python")]
-mod python;
+pub use special::{fast_dawson, fast_erf, fast_w};

@@ -16,7 +16,7 @@
 //! with [`crate::Evaluator`] to cache per-component work.
 //!
 //! ```
-//! use _core::Model;
+//! use lineshapes::Model;
 //! let mut model = Model::new()
 //!     .gaussian(933.8, 0.49, 4.1e-5)
 //!     .voigt(935.7, 0.8, 0.3, 7.4e-5)
@@ -42,11 +42,26 @@ pub enum Component {
     /// `gamma` is the half width at half maximum.
     Lorentzian { e0: f64, gamma: f64, amp: f64 },
     /// Exact Voigt: Gaussian std `sigma`, Lorentzian HWHM `gamma`.
-    Voigt { e0: f64, sigma: f64, gamma: f64, amp: f64 },
+    Voigt {
+        e0: f64,
+        sigma: f64,
+        gamma: f64,
+        amp: f64,
+    },
     /// `eta*L + (1-eta)*G` with shared `fwhm`.
-    PseudoVoigt { e0: f64, fwhm: f64, eta: f64, amp: f64 },
+    PseudoVoigt {
+        e0: f64,
+        fwhm: f64,
+        eta: f64,
+        amp: f64,
+    },
     /// Erf ionization step in beta with linear post-edge `decay`.
-    Step { e0: f64, width: f64, height: f64, decay: f64 },
+    Step {
+        e0: f64,
+        width: f64,
+        height: f64,
+        decay: f64,
+    },
 }
 
 impl Component {
@@ -80,20 +95,53 @@ impl Component {
         match *self {
             Component::Gaussian { e0, width, amp } => out.extend([e0, width, amp]),
             Component::Lorentzian { e0, gamma, amp } => out.extend([e0, gamma, amp]),
-            Component::Voigt { e0, sigma, gamma, amp } => out.extend([e0, sigma, gamma, amp]),
+            Component::Voigt {
+                e0,
+                sigma,
+                gamma,
+                amp,
+            } => out.extend([e0, sigma, gamma, amp]),
             Component::PseudoVoigt { e0, fwhm, eta, amp } => out.extend([e0, fwhm, eta, amp]),
-            Component::Step { e0, width, height, decay } => out.extend([e0, width, height, decay]),
+            Component::Step {
+                e0,
+                width,
+                height,
+                decay,
+            } => out.extend([e0, width, height, decay]),
         }
     }
 
     /// Same kind with parameters taken from `p` (length [`Component::n_params`]).
     fn with_params(&self, p: &[f64]) -> Component {
         match self {
-            Component::Gaussian { .. } => Component::Gaussian { e0: p[0], width: p[1], amp: p[2] },
-            Component::Lorentzian { .. } => Component::Lorentzian { e0: p[0], gamma: p[1], amp: p[2] },
-            Component::Voigt { .. } => Component::Voigt { e0: p[0], sigma: p[1], gamma: p[2], amp: p[3] },
-            Component::PseudoVoigt { .. } => Component::PseudoVoigt { e0: p[0], fwhm: p[1], eta: p[2], amp: p[3] },
-            Component::Step { .. } => Component::Step { e0: p[0], width: p[1], height: p[2], decay: p[3] },
+            Component::Gaussian { .. } => Component::Gaussian {
+                e0: p[0],
+                width: p[1],
+                amp: p[2],
+            },
+            Component::Lorentzian { .. } => Component::Lorentzian {
+                e0: p[0],
+                gamma: p[1],
+                amp: p[2],
+            },
+            Component::Voigt { .. } => Component::Voigt {
+                e0: p[0],
+                sigma: p[1],
+                gamma: p[2],
+                amp: p[3],
+            },
+            Component::PseudoVoigt { .. } => Component::PseudoVoigt {
+                e0: p[0],
+                fwhm: p[1],
+                eta: p[2],
+                amp: p[3],
+            },
+            Component::Step { .. } => Component::Step {
+                e0: p[0],
+                width: p[1],
+                height: p[2],
+                decay: p[3],
+            },
         }
     }
 
@@ -107,18 +155,30 @@ impl Component {
             }
         }
         let positive = |name: &str, v: f64| {
-            if v > 0.0 { Ok(()) } else { Err(format!("{}.{name} must be > 0, got {v}", self.kind())) }
+            if v > 0.0 {
+                Ok(())
+            } else {
+                Err(format!("{}.{name} must be > 0, got {v}", self.kind()))
+            }
         };
         match *self {
             Component::Gaussian { width, .. } => positive("width", width),
             Component::Lorentzian { gamma, .. } => positive("gamma", gamma),
             Component::Voigt { sigma, gamma, .. } => {
                 positive("sigma", sigma)?;
-                if gamma >= 0.0 { Ok(()) } else { Err(format!("voigt.gamma must be >= 0, got {gamma}")) }
+                if gamma >= 0.0 {
+                    Ok(())
+                } else {
+                    Err(format!("voigt.gamma must be >= 0, got {gamma}"))
+                }
             }
             Component::PseudoVoigt { fwhm, eta, .. } => {
                 positive("fwhm", fwhm)?;
-                if (0.0..=1.0).contains(&eta) { Ok(()) } else { Err(format!("pseudo_voigt.eta must be in [0, 1], got {eta}")) }
+                if (0.0..=1.0).contains(&eta) {
+                    Ok(())
+                } else {
+                    Err(format!("pseudo_voigt.eta must be in [0, 1], got {eta}"))
+                }
             }
             Component::Step { width, .. } => positive("width", width),
         }
@@ -195,7 +255,12 @@ impl Model {
 
     /// Exact Voigt: Gaussian std `sigma` convolved with Lorentzian HWHM `gamma`.
     pub fn voigt(mut self, e0: f64, sigma: f64, gamma: f64, amp: f64) -> Self {
-        self.add(Component::Voigt { e0, sigma, gamma, amp });
+        self.add(Component::Voigt {
+            e0,
+            sigma,
+            gamma,
+            amp,
+        });
         self
     }
 
@@ -207,7 +272,12 @@ impl Model {
 
     /// Erf ionization step in beta with optional linear post-edge `decay`.
     pub fn step(mut self, e0: f64, width: f64, height: f64, decay: f64) -> Self {
-        self.add(Component::Step { e0, width, height, decay });
+        self.add(Component::Step {
+            e0,
+            width,
+            height,
+            decay,
+        });
         self
     }
 
@@ -230,9 +300,16 @@ impl Model {
     }
 
     pub fn set_delta_table(&mut self, energy: &[f64], delta: &[f64]) {
-        assert_eq!(energy.len(), delta.len(), "delta table energy/delta length mismatch");
+        assert_eq!(
+            energy.len(),
+            delta.len(),
+            "delta table energy/delta length mismatch"
+        );
         assert!(!energy.is_empty(), "delta table must be non-empty");
-        assert!(energy.windows(2).all(|w| w[0] < w[1]), "delta table energies must be strictly increasing");
+        assert!(
+            energy.windows(2).all(|w| w[0] < w[1]),
+            "delta table energies must be strictly increasing"
+        );
         self.table_e = energy.to_vec();
         self.table_delta = delta.to_vec();
     }
@@ -271,7 +348,11 @@ impl Model {
 
     /// Length of the flat parameter vector.
     pub fn n_params(&self) -> usize {
-        self.components.iter().map(Component::n_params).sum::<usize>() + N_GLOBAL
+        self.components
+            .iter()
+            .map(Component::n_params)
+            .sum::<usize>()
+            + N_GLOBAL
     }
 
     /// Current flat parameter vector.
@@ -304,7 +385,11 @@ impl Model {
     /// Cost is O(number of components): no energy-grid work.
     pub fn set_params(&mut self, theta: &[f64]) -> Result<(), String> {
         if theta.len() != self.n_params() {
-            return Err(format!("expected {} parameters, got {}", self.n_params(), theta.len()));
+            return Err(format!(
+                "expected {} parameters, got {}",
+                self.n_params(),
+                theta.len()
+            ));
         }
         let mut new = Vec::with_capacity(self.components.len());
         let mut i = 0;
@@ -372,7 +457,13 @@ impl Model {
     }
 
     /// Add the delta table evaluated at `E + shift` to `out.re`.
-    pub(crate) fn add_table(&self, energy: &[f64], shift: f64, sorted: bool, out: &mut [Complex64]) {
+    pub(crate) fn add_table(
+        &self,
+        energy: &[f64],
+        shift: f64,
+        sorted: bool,
+        out: &mut [Complex64],
+    ) {
         if self.table_e.is_empty() {
             return;
         }
@@ -395,7 +486,13 @@ impl Model {
     }
 
     /// Add one component's contribution at `E + shift` into `out` (used by the evaluator cache).
-    pub(crate) fn accumulate_component(c: &Component, energy: &[f64], shift: f64, sorted: bool, out: &mut [Complex64]) {
+    pub(crate) fn accumulate_component(
+        c: &Component,
+        energy: &[f64],
+        shift: f64,
+        sorted: bool,
+        out: &mut [Complex64],
+    ) {
         let mut k = Kernels::default();
         k.push(c);
         k.accumulate(energy, shift, sorted, out);
@@ -505,7 +602,9 @@ mod tests {
         let mut idx: Vec<usize> = (0..e.len()).collect();
         let mut st = 12345u64;
         for i in (1..idx.len()).rev() {
-            st = st.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            st = st
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             idx.swap(i, (st >> 33) as usize % (i + 1));
         }
         let shuffled: Vec<f64> = idx.iter().map(|&i| e[i]).collect();
@@ -526,7 +625,10 @@ mod tests {
     #[cfg(feature = "parallel")]
     #[test]
     fn parallel_matches_serial() {
-        let m = Model::new().gaussian(930.0, 1.0, 1.0).voigt(940.0, 0.5, 0.3, 1.0).step(935.0, 2.0, 1.0, 0.1);
+        let m = Model::new()
+            .gaussian(930.0, 1.0, 1.0)
+            .voigt(940.0, 0.5, 0.3, 1.0)
+            .step(935.0, 2.0, 1.0, 0.1);
         let e: Vec<f64> = (0..10_000).map(|i| 900.0 + i as f64 * 0.01).collect();
         assert_eq!(m.eval(&e), m.eval_par(&e));
     }

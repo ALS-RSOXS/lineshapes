@@ -15,3 +15,8 @@ tmp/
 # Rust build output
 target/
 *.so
+
+# Docs
+site/
+.venv-docs/
+docs/assets/generated/

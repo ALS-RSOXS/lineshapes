@@ -1,0 +1,22 @@
+[package]
+name = "lineshapes"
+description = "Fast composable optical-constant models: analytic Kramers-Kronig-paired lineshape peaks (Gaussian, Lorentzian, Voigt, pseudo-Voigt) plus a continuum."
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme = "README.md"
+keywords = ["optics", "x-ray", "kramers-kronig", "lineshape", "voigt"]
+categories = ["science", "mathematics"]
+
+[features]
+default = ["parallel"]
+# Multi-core evaluation (`Model::eval_par`) via rayon.
+parallel = ["dep:rayon"]
+
+[dependencies]
+num-complex.workspace = true
+errorfunctions = "0.2"
+rayon = { version = "1.10", optional = true }

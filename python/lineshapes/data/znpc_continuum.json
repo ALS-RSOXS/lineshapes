@@ -1,0 +1,28 @@
+{
+  "formula": "ZnC32H16N8",
+  "density_g_cm3": 1.0,
+  "window_ev": [
+    270.1997985839844,
+    330.00115966796875
+  ],
+  "bkg": 0.0007547856012257329,
+  "slope": -2.102384450769866e-06,
+  "step": {
+    "e0": 291.1360549926758,
+    "width": 1.5,
+    "height": 0.0010237746397035092,
+    "decay": -7.153847900249425e-06
+  },
+  "fit_regions_ev": [
+    [
+      270.1997985839844,
+      280.0
+    ],
+    [
+      305.0,
+      330.00115966796875
+    ]
+  ],
+  "rms_rel_beta_error_in_fit_regions": 0.00263382056021066,
+  "note": "Continuum beta = bkg + slope*E + erf step at the ionization energy; delta table = kkcalc2 of this beta on the example window (density=1.0, per unit density). Fixed ahead of time; peaks are fit on top."
+}

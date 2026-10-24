@@ -1,0 +1,92 @@
+site_name: lineshapes
+site_description: Fast composable optical-constant models from analytic Kramers-Kronig-paired lineshapes.
+site_url: https://als-rsoxs.github.io/lineshapes
+repo_url: https://github.com/ALS-RSOXS/lineshapes
+repo_name: ALS-RSOXS/lineshapes
+edit_uri: edit/main/docs/
+
+extra:
+  als_group:
+    full_name: ALS RSOXS Group Project
+    acronym: REIXS
+    github_url: https://github.com/als-rsoxs
+    reixs_url: https://als.lbl.gov/science/photon-science-programs/rixs-program/
+
+theme:
+  name: rsoxs
+  show_title: true
+  show_stargazers: false
+  topbar_sections: false
+  features:
+    - content.code.copy
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - toc.follow
+
+exclude_docs: |
+  assets/generated/*.md
+
+extra_css:
+  - stylesheets/extra.css
+
+hooks:
+  - tools/docs_hooks.py
+
+plugins:
+  - rsoxs
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths:
+            - python
+          options:
+            show_source: false
+            show_root_heading: true
+            show_root_toc_entry: true
+            docstring_style: google
+            allow_inspection: false
+            filters: ["!^_", "^__call__$"]
+            merge_init_into_class: true
+            members_order: source
+            show_signature_annotations: true
+            separate_signature: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+      css_class: codehilite
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.arithmatex:
+      generic: true
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Concepts: concepts.md
+  - Examples:
+      - ZnPc NEXAFS: examples/znpc.md
+      - Alq3 optical constants: examples/alq3.md
+  - Guide:
+      - Fitting without rebuilding: guide/fitting.md
+  - Validation: validation.md
+  - API reference:
+      - Python: api/python.md
+      - Rust: api/rust.md
+  - Releasing: releasing.md

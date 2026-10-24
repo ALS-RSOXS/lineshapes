@@ -7,7 +7,7 @@
 //! and `continuum.slope` never trigger component work; changing `shift` recomputes everything.
 //!
 //! ```
-//! use _core::{Evaluator, Model};
+//! use lineshapes::{Evaluator, Model};
 //! let model = Model::new().gaussian(930.0, 1.0, 1.0).gaussian(940.0, 2.0, 0.5);
 //! let energy: Vec<f64> = (0..1000).map(|i| 900.0 + 0.1 * i as f64).collect();
 //! let mut ev = Evaluator::new(model, &energy, true);
@@ -63,7 +63,13 @@ impl Evaluator {
             scratch: vec![Complex64::new(0.0, 0.0); n],
             updates: 0,
         });
-        Self { sorted: is_sorted(energy), energy: energy.to_vec(), model, table: None, cache }
+        Self {
+            sorted: is_sorted(energy),
+            energy: energy.to_vec(),
+            model,
+            table: None,
+            cache,
+        }
     }
 
     pub fn model(&self) -> &Model {
@@ -99,7 +105,11 @@ impl Evaluator {
 
     /// Evaluate at the current parameters into `out` (length of the bound grid).
     pub fn eval_into(&mut self, out: &mut [Complex64]) {
-        assert_eq!(out.len(), self.energy.len(), "out length must match the bound energy grid");
+        assert_eq!(
+            out.len(),
+            self.energy.len(),
+            "out length must match the bound energy grid"
+        );
         let (bkg, slope, scale, shift) = self.model.global();
         let (energy, sorted) = (&self.energy[..], self.sorted);
 
@@ -151,7 +161,9 @@ fn update_cache(c: &mut Cache, model: &Model, energy: &[f64], shift: f64, sorted
         c.shift = shift;
     }
     let comps = model.components();
-    let changed: Vec<usize> = (0..comps.len()).filter(|&k| c.comps[k] != Some(comps[k])).collect();
+    let changed: Vec<usize> = (0..comps.len())
+        .filter(|&k| c.comps[k] != Some(comps[k]))
+        .collect();
     if changed.is_empty() {
         return;
     }
@@ -199,7 +211,11 @@ mod tests {
 
     fn rel_err(a: &[Complex64], b: &[Complex64]) -> f64 {
         let m = b.iter().map(|z| z.norm()).fold(0.0, f64::max);
-        a.iter().zip(b).map(|(x, y)| (x - y).norm()).fold(0.0, f64::max) / m
+        a.iter()
+            .zip(b)
+            .map(|(x, y)| (x - y).norm())
+            .fold(0.0, f64::max)
+            / m
     }
 
     #[test]
@@ -213,7 +229,9 @@ mod tests {
         let mut out2 = out.clone();
         let mut st = 7u64;
         let mut rnd = || {
-            st = st.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            st = st
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             (st >> 11) as f64 / (1u64 << 53) as f64
         };
         for it in 0..300 {
@@ -221,7 +239,12 @@ mod tests {
             let k = (rnd() * theta.len() as f64) as usize;
             let names = m.param_names();
             let bump = |v: f64, name: &str, r: f64| {
-                if name.ends_with("eta") { (v + 0.01 * (r - 0.5)).clamp(0.0, 1.0) } else { v * (1.0 + 0.01 * (r - 0.5)) + 1e-3 * (r - 0.5) * (name.ends_with("e0") as u8 as f64) }
+                if name.ends_with("eta") {
+                    (v + 0.01 * (r - 0.5)).clamp(0.0, 1.0)
+                } else {
+                    v * (1.0 + 0.01 * (r - 0.5))
+                        + 1e-3 * (r - 0.5) * (name.ends_with("e0") as u8 as f64)
+                }
             };
             if it % 50 == 0 {
                 for j in 0..theta.len() {
@@ -234,7 +257,11 @@ mod tests {
             ev_nc.eval_params_into(&theta, &mut out2).unwrap();
             m.set_params(&theta).unwrap();
             let direct = m.eval(&energy);
-            assert!(rel_err(&out, &direct) < 1e-13, "cached it {it}: {}", rel_err(&out, &direct));
+            assert!(
+                rel_err(&out, &direct) < 1e-13,
+                "cached it {it}: {}",
+                rel_err(&out, &direct)
+            );
             assert!(rel_err(&out2, &direct) < 1e-15, "uncached it {it}");
         }
     }
@@ -247,7 +274,10 @@ mod tests {
         assert_eq!(m.param_names().len(), p.len());
         assert_eq!(m.param_names()[0], "gaussian[0].e0");
         assert_eq!(m.param_names()[11], "pseudo_voigt[0].fwhm");
-        assert_eq!(&m.param_names()[p.len() - 4..], &["continuum.bkg", "continuum.slope", "scale", "shift"]);
+        assert_eq!(
+            &m.param_names()[p.len() - 4..],
+            &["continuum.bkg", "continuum.slope", "scale", "shift"]
+        );
         m.set_params(&p).unwrap();
         assert_eq!(m.params(), p);
         let mut bad = p.clone();

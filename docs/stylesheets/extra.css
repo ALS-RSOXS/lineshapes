@@ -1,0 +1,5 @@
+/* Light/dark figure variants: ![alt](x-light.png#only-light) ![alt](x-dark.png#only-dark) */
+html.dark img[src$="#only-light"],
+html:not(.dark) img[src$="#only-dark"] {
+  display: none;
+}

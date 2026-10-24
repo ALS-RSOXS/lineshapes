@@ -7,7 +7,7 @@ Every precision test runs against each available *backend*: a module exposing
 with the signatures of ``tests/reference/lineshapes_ref.py``.
 
 * ``reference``: the pure-numpy reference (always available).
-* ``rust``: ``lineshapes_rs`` once it exposes those names (skipped until then).
+* ``rust``: ``lineshapes`` once it exposes those names (skipped until then).
 
 Speed tests compare non-reference backends against the reference timing
 measured in the same session, so they are machine-independent.
@@ -31,11 +31,11 @@ API = ("gaussian", "lorentzian", "voigt", "pseudo_voigt", "continuum_beta", "opt
 def _rust_backend():
     import importlib.util
 
-    if importlib.util.find_spec("lineshapes_rs") is None:
+    if importlib.util.find_spec("lineshapes") is None:
         return None
-    import lineshapes_rs  # installed but broken -> fail loudly, never skip silently
+    import lineshapes  # installed but broken -> fail loudly, never skip silently
 
-    return lineshapes_rs if all(hasattr(lineshapes_rs, n) for n in API) else None
+    return lineshapes if all(hasattr(lineshapes, n) for n in API) else None
 
 
 BACKENDS = {"reference": lineshapes_ref, "rust": _rust_backend()}

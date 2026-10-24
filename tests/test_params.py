@@ -5,8 +5,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-lineshapes_rs = pytest.importorskip("lineshapes_rs")
-from lineshapes_rs import Model  # noqa: E402
+lineshapes = pytest.importorskip("lineshapes")
+from lineshapes import Model  # noqa: E402
 
 E = np.linspace(900.0, 1000.0, 4001)
 

@@ -1,29 +1,22 @@
-[package]
-name = "lineshapes_rs"
+[workspace]
+resolver = "3"
+members = ["crates/lineshapes", "crates/lineshapes-py"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
-description = "Fast composable optical-constant models: analytic KK-paired lineshape peaks + continuum."
+authors = ["Harlan D Heilman"]
+license = "BSD-3-Clause-LBNL"
+repository = "https://github.com/ALS-RSOXS/lineshapes"
+homepage = "https://als-rsoxs.github.io/lineshapes"
 
-[lib]
-name = "_core"
-# cdylib for the Python extension, rlib so other Rust crates (e.g. refloxide) can depend on it.
-crate-type = ["cdylib", "rlib"]
-
-[features]
-default = ["python", "parallel"]
-python = ["dep:pyo3", "dep:numpy"]
-parallel = ["dep:rayon"]
-
-[dependencies]
+[workspace.dependencies]
 num-complex = "0.4"
-errorfunctions = "0.2"
-rayon = { version = "1.10", optional = true }
-pyo3 = { version = "0.28.2", features = ["extension-module", "abi3-py312"], optional = true }
-numpy = { version = "0.28", optional = true }
+lineshapes = { path = "crates/lineshapes", version = "0.1.0", default-features = false }
 
 [profile.release]
-strip = false
-# strip must stay off: on this macOS toolchain stripping corrupts the extension
-# ("mis-aligned LINKEDIT string pool" at import).
 lto = "fat"
 codegen-units = 1
+# strip must stay off: on this macOS toolchain stripping corrupts the extension
+# ("mis-aligned LINKEDIT string pool" at import).
+strip = false

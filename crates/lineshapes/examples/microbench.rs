@@ -1,12 +1,17 @@
-use _core::Model;
+use lineshapes::Model;
 use std::time::Instant;
 fn bench(name: &str, m: &Model, e: &[f64]) {
     let mut out = m.eval(e);
     let reps = 3000;
     let t = Instant::now();
-    for _ in 0..reps { m.eval_into(e, &mut out); }
-    println!("{name:10} {:.2} ns/pt  ({:.1} us)", t.elapsed().as_nanos() as f64 / (e.len()*reps) as f64,
-             t.elapsed().as_nanos() as f64 / reps as f64 / 1e3);
+    for _ in 0..reps {
+        m.eval_into(e, &mut out);
+    }
+    println!(
+        "{name:10} {:.2} ns/pt  ({:.1} us)",
+        t.elapsed().as_nanos() as f64 / (e.len() * reps) as f64,
+        t.elapsed().as_nanos() as f64 / reps as f64 / 1e3
+    );
     std::hint::black_box(&out);
 }
 fn main() {

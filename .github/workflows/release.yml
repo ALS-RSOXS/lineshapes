@@ -1,0 +1,184 @@
+# Release: when the workspace version in Cargo.toml has no matching git tag yet, test, build wheels
+# + sdist, publish the crate to crates.io and the package to PyPI, then tag `vX.Y.Z` and create a
+# GitHub release. One version (the [workspace.package] version) covers both packages.
+# See RELEASING.md for the one-time setup (PyPI trusted publisher, CARGO_REGISTRY_TOKEN).
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - Cargo.toml
+      - Cargo.lock
+      - pyproject.toml
+      - crates/**
+      - python/**
+      - .github/workflows/release.yml
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build everything but do not publish or tag
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: decide whether to release
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.v.outputs.release }}
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: |
+          version=$(cargo metadata --no-deps --format-version 1 \
+            | python3 -c "import json,sys; print(next(p['version'] for p in json.load(sys.stdin)['packages'] if p['name']=='lineshapes'))")
+          py_version=$(cargo metadata --no-deps --format-version 1 \
+            | python3 -c "import json,sys; print(next(p['version'] for p in json.load(sys.stdin)['packages'] if p['name']=='lineshapes-py'))")
+          if [ "$version" != "$py_version" ]; then
+            echo "::error::lineshapes ($version) and lineshapes-py ($py_version) versions differ; use [workspace.package] version"
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null 2>&1; then
+            echo "Tag v$version already exists: nothing to release."
+            release=false
+          else
+            echo "New version v$version: releasing."
+            release=true
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+
+  ci:
+    name: tests
+    needs: check
+    if: needs.check.outputs.release == 'true'
+    uses: ./.github/workflows/ci.yml
+
+  wheels:
+    name: wheel (${{ matrix.name }})
+    needs: [check, ci]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux-x86_64,   os: ubuntu-latest,    target: x86_64,  manylinux: auto }
+          - { name: linux-aarch64,  os: ubuntu-latest,    target: aarch64, manylinux: auto }
+          - { name: macos-x86_64,   os: macos-15-intel,   target: x86_64 }
+          - { name: macos-arm64,    os: macos-latest,     target: aarch64 }
+          - { name: windows-x64,    os: windows-latest,   target: x64 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: build abi3 wheel (one wheel covers Python >= 3.12)
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          manylinux: ${{ matrix.manylinux || 'auto' }}
+          args: --release --locked --out dist
+          sccache: true
+      - name: smoke test (native runners)
+        if: matrix.name != 'linux-aarch64' && matrix.name != 'macos-x86_64'
+        shell: bash
+        run: |
+          pip install numpy
+          pip install --no-index --find-links dist lineshapes
+          python -c "
+          import numpy as np, lineshapes
+          z = lineshapes.Model().gaussian(930.0, 1.0, 2.0)(np.array([929.0, 930.0, 931.0]))
+          assert abs(z[1].imag - 2.0) < 1e-12 and z[0].real < 0 < z[2].real, z
+          print('ok', lineshapes.Model)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.name }}
+          path: dist
+
+  sdist:
+    needs: [check, ci]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist
+
+  publish-crates:
+    name: publish to crates.io
+    needs: [check, wheels, sdist]
+    if: github.event.inputs.dry_run != 'true'
+    runs-on: ubuntu-latest
+    environment: crates-io
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: publish (skipped if this version is already on crates.io)
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" -A "lineshapes-release-ci" \
+            "https://crates.io/api/v1/crates/lineshapes/$VERSION")
+          if [ "$code" = "200" ]; then
+            echo "lineshapes $VERSION already on crates.io; skipping."
+          else
+            cargo publish -p lineshapes --locked
+          fi
+
+  publish-pypi:
+    name: publish to PyPI
+    needs: [check, wheels, sdist]
+    if: github.event.inputs.dry_run != 'true'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write # PyPI trusted publishing (OIDC); no API token needed
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: "{wheels-*,sdist}"
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+          skip-existing: true
+
+  github-release:
+    name: tag and GitHub release
+    needs: [check, publish-crates, publish-pypi]
+    if: github.event.inputs.dry_run != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: "{wheels-*,sdist}"
+          merge-multiple: true
+      - name: create tag and release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          gh release create "v$VERSION" dist/* \
+            --target "$GITHUB_SHA" \
+            --title "v$VERSION" \
+            --generate-notes
