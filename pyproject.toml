@@ -1,0 +1,44 @@
+[project]
+name = "lineshapes-rs"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Harlan D Heilman", email = "73567020+HarlanHeilman@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib>=3.11.2",
+    "numpy",
+    "scipy",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "kkcalc2",
+]
+
+[tool.uv.sources]
+# Single pinned kkcalc version for KK validation (same commit lr-optical-models locks).
+kkcalc2 = { git = "https://github.com/xraysoftmat/kkcalc.git", rev = "e750040f96fded5cf8044282d6db9a84e96d353c" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "kkcalc: compares against kkcalc2 (slower)",
+    "speed: timing comparison of a backend against the Python reference",
+]
+filterwarnings = ["ignore::UserWarning:kkcalc2.*"]
+
+[tool.maturin]
+module-name = "lineshapes_rs._core"
+python-packages = ["lineshapes_rs"]
+python-source = "src"
+
+[tool.uv]
+cache-keys = [{ file = "pyproject.toml" }, { file = "src/**/*.rs" }, { file = "Cargo.toml" }, { file = "Cargo.lock" }]
+
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
