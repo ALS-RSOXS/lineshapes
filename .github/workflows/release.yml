@@ -1,7 +1,8 @@
 # Release: when the workspace version in Cargo.toml has no matching git tag yet, test, build wheels
-# + sdist, publish the crate to crates.io and the package to PyPI, then tag `vX.Y.Z` and create a
-# GitHub release. One version (the [workspace.package] version) covers both packages.
-# See RELEASING.md for the one-time setup (PyPI trusted publisher, CARGO_REGISTRY_TOKEN).
+# + sdist + wasm package, publish the crate to crates.io, the Python package to PyPI, and the WASM
+# package to npm, then tag `vX.Y.Z` and create a GitHub release. One version (the [workspace.package]
+# version) covers all three packages (`lineshapes` on crates.io, PyPI, and npm).
+# See CONTRIBUTING.md for the one-time setup (PyPI & npm trusted publishers, CARGO_REGISTRY_TOKEN).
 name: Release
 
 on:
@@ -43,8 +44,10 @@ jobs:
             | python3 -c "import json,sys; print(next(p['version'] for p in json.load(sys.stdin)['packages'] if p['name']=='lineshapes'))")
           py_version=$(cargo metadata --no-deps --format-version 1 \
             | python3 -c "import json,sys; print(next(p['version'] for p in json.load(sys.stdin)['packages'] if p['name']=='lineshapes-py'))")
-          if [ "$version" != "$py_version" ]; then
-            echo "::error::lineshapes ($version) and lineshapes-py ($py_version) versions differ; use [workspace.package] version"
+          wasm_version=$(cargo metadata --no-deps --format-version 1 \
+            | python3 -c "import json,sys; print(next(p['version'] for p in json.load(sys.stdin)['packages'] if p['name']=='lineshapes-wasm'))")
+          if [ "$version" != "$py_version" ] || [ "$version" != "$wasm_version" ]; then
+            echo "::error::lineshapes ($version), lineshapes-py ($py_version), and lineshapes-wasm ($wasm_version) versions differ; use [workspace.package] version"
             exit 1
           fi
           if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null 2>&1; then
@@ -118,9 +121,34 @@ jobs:
           name: sdist
           path: dist
 
+  wasm:
+    name: wasm (npm tarball)
+    needs: [check, ci]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen-cli@0.2.130
+      - uses: oven-sh/setup-bun@v2
+      - name: build, test, and pack npm tarball
+        run: |
+          bun crates/lineshapes-wasm/scripts/build.ts
+          bun test crates/lineshapes-wasm/tests/lineshapes.test.ts
+          mkdir -p dist
+          (cd crates/lineshapes-wasm && bun pm pack --destination ../../dist)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wasm-npm
+          path: dist
+
   publish-crates:
     name: publish to crates.io
-    needs: [check, wheels, sdist]
+    needs: [check, wheels, sdist, wasm]
     if: github.event.inputs.dry_run != 'true'
     runs-on: ubuntu-latest
     environment: crates-io
@@ -142,7 +170,7 @@ jobs:
 
   publish-pypi:
     name: publish to PyPI
-    needs: [check, wheels, sdist]
+    needs: [check, wheels, sdist, wasm]
     if: github.event.inputs.dry_run != 'true'
     runs-on: ubuntu-latest
     environment: pypi
@@ -159,9 +187,36 @@ jobs:
           packages-dir: dist
           skip-existing: true
 
+  publish-npm:
+    name: publish to npm
+    needs: [check, wheels, sdist, wasm]
+    if: github.event.inputs.dry_run != 'true'
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      id-token: write # npm trusted publishing (OIDC); no API token needed
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - uses: actions/download-artifact@v4
+        with:
+          name: wasm-npm
+          path: dist
+      - name: publish (skipped if this version is already on npm)
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          if npm view "lineshapes@$VERSION" version >/dev/null 2>&1; then
+            echo "lineshapes@$VERSION already on npm; skipping."
+          else
+            npm install -g npm@latest
+            npm publish dist/lineshapes-"$VERSION".tgz --provenance --access public
+          fi
+
   github-release:
     name: tag and GitHub release
-    needs: [check, publish-crates, publish-pypi]
+    needs: [check, publish-crates, publish-pypi, publish-npm]
     if: github.event.inputs.dry_run != 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -171,7 +226,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: dist
-          pattern: "{wheels-*,sdist}"
+          pattern: "{wheels-*,sdist,wasm-npm}"
           merge-multiple: true
       - name: create tag and release
         env:

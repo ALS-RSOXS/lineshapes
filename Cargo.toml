@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/lineshapes", "crates/lineshapes-py"]
+members = ["crates/lineshapes", "crates/lineshapes-py", "crates/lineshapes-wasm"]
 
 [workspace.package]
 version = "0.1.0"

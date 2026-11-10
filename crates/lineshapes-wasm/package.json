@@ -1,0 +1,50 @@
+{
+  "name": "lineshapes",
+  "version": "0.1.0",
+  "description": "Fast composable optical-constant models: analytic Kramers-Kronig-paired lineshape peaks (Gaussian, Lorentzian, Voigt, pseudo-Voigt) plus a continuum, compiled to WebAssembly.",
+  "author": "Harlan D Heilman",
+  "license": "BSD-3-Clause-LBNL",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ALS-RSOXS/lineshapes.git",
+    "directory": "crates/lineshapes-wasm"
+  },
+  "homepage": "https://als-rsoxs.github.io/lineshapes",
+  "keywords": [
+    "optics",
+    "x-ray",
+    "nexafs",
+    "rsoxs",
+    "kramers-kronig",
+    "lineshape",
+    "voigt",
+    "wasm"
+  ],
+  "type": "module",
+  "main": "./pkg/index.js",
+  "module": "./pkg/index.js",
+  "types": "./pkg/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./pkg/index.d.ts",
+      "default": "./pkg/index.js"
+    },
+    "./raw": {
+      "types": "./pkg/lineshapes_wasm.d.ts",
+      "default": "./pkg/lineshapes_wasm.js"
+    },
+    "./wasm": "./pkg/lineshapes_wasm_bg.wasm"
+  },
+  "files": [
+    "pkg",
+    "README.md",
+    "LICENSE",
+    "COPYRIGHT"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "bun scripts/build.ts",
+    "prepublishOnly": "bun scripts/build.ts && bun test",
+    "test": "bun test"
+  }
+}

@@ -3,7 +3,7 @@
 Fast, composable optical-constant models for soft X-ray work. A model is a sum of
 **analytic Kramers-Kronig-paired peaks** (Gaussian, Lorentzian, Voigt, pseudo-Voigt) plus a
 **continuum** parameterized in beta (linear background + erf ionization steps) and a
-**fixed continuum delta table** (e.g. precomputed once with kkcalc). Rust core, Python bindings.
+**fixed continuum delta table** (e.g. precomputed once with kkcalc). Rust core, Python and WebAssembly/TypeScript bindings.
 
 Evaluating a model returns `delta + 1j*beta` (n = 1 - delta + i beta) on an energy grid in eV.
 
@@ -45,21 +45,24 @@ environment (`.venv-docs`); the library itself supports Python >= 3.12.
 ## Layout
 
 ```
-crates/lineshapes/      pure-Rust crate `lineshapes` (no Python/pyo3): Model, Evaluator, special functions
-crates/lineshapes-py/   thin PyO3 bindings crate -> lineshapes._core (not published to crates.io)
-python/lineshapes/        Python package (re-exports, function API, type stubs)
+crates/lineshapes/       pure-Rust crate `lineshapes` (no Python/pyo3): Model, Evaluator, special functions
+crates/lineshapes-py/    thin PyO3 bindings crate -> lineshapes._core (not published to crates.io)
+crates/lineshapes-wasm/  WebAssembly / TypeScript bindings (`wasm-bindgen`) for Bun and TSX apps
+python/lineshapes/       Python package (re-exports, function API, type stubs)
 docs/ examples/ tools/   mkdocs site, example scripts, data/docs generators
 tests/ benchmarks/ prototypes/   pytest suite vs numpy reference, timings, figures
 ```
 
-Each half stands alone: `cargo add lineshapes` for Rust only (feature `parallel`, on by default,
-adds rayon), or `pip install lineshapes` for Python (bundles the compiled core). See
-`crates/lineshapes/README.md` for Rust usage.
+Each target stands alone: `cargo add lineshapes` for Rust only (feature `parallel`, on by default,
+adds rayon), `pip install lineshapes` for Python (bundles the compiled core), or `crates/lineshapes-wasm`
+for TypeScript/Bun/Next.js (`make wasm`). See `crates/lineshapes/README.md` for Rust usage and
+`crates/lineshapes-wasm/README.md` for TypeScript usage.
 
 ## Development
 
 ```sh
 cargo test --workspace --release                          # Rust unit, integration and doc tests
+make wasm-test                                            # Build lineshapes-wasm and run Bun tests
 uv sync                                                   # builds the extension (release)
 uv run --with maturin maturin develop --release --uv      # rebuild after Rust changes
 uv run pytest                                             # precision + speed vs numpy reference

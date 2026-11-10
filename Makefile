@@ -1,6 +1,12 @@
-.PHONY: docs docs-figures docs-serve docs-clean
+.PHONY: docs docs-figures docs-serve docs-clean wasm wasm-test
 # The docs theme needs Python >= 3.13, so docs use their own environment (the library supports 3.12+).
 DOCS = UV_PROJECT_ENVIRONMENT=.venv-docs uv run --python 3.13 --group docs
+
+wasm:
+	bun crates/lineshapes-wasm/scripts/build.ts
+
+wasm-test: wasm
+	bun test crates/lineshapes-wasm/tests/lineshapes.test.ts
 
 docs-figures:
 	rm -rf docs/assets/generated

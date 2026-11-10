@@ -1,0 +1,17 @@
+[package]
+name = "lineshapes-wasm"
+description = "WebAssembly and TypeScript bindings (wasm-bindgen) for the `lineshapes` crate."
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+lineshapes.workspace = true
+wasm-bindgen = "=0.2.130"

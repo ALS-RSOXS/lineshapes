@@ -16,6 +16,10 @@ tmp/
 target/
 *.so
 
+# WebAssembly / JS build output
+crates/lineshapes-wasm/pkg/
+node_modules/
+
 # Docs
 site/
 .venv-docs/
